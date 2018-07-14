@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 # str_analysis.py ver. 0.1
-# Copyright (C) 2018 Fumito Minakami
-# This script is aimed for visualization of corelation between clusters and RNA 2D stuctures.
+# Copyright (C) 2018 Fumito.M
+# This script is aimed for visualization of correlation between clustering of RNA-Seq and its 2D stucture. 
 # In: Paths to reference transcriptome (FASTA format), targeting clusters (FASTA format) and original cluster file (CSV) from PARalyzer.
-# Out: Heatmap on clusters and thier stemming probabilities
+# Out: Heatmap on clustering and its stemming probability
 # Usage: Type "./str_analysis.py -h" in your terminal.
 
 import argparse
@@ -21,7 +21,8 @@ import collections
 
 # Constants
 ADD_N = 25
-ALLOW_DIFF = 2
+ALLOW_DIFF_N = 2
+MFE_VAL = 2
 
 def check_identity(arr1, arr2, allowance_n = 2):
 	if len(arr1) != len(arr2):
@@ -127,8 +128,8 @@ with gzip.open(args.clust, "rt") as f:
 
 			# ToDo: Check if getting from identical chromosome arrays.
 			# ToDo: Set searching conditions
-			if not check_identity(clst['Array'],ref[25:-25], ALLOW_DIFF):
-				if check_identity(clst['Array'], get_comp_strand(ref[25:-25]), ALLOW_DIFF):
+			if not check_identity(clst['Array'],ref[25:-25], ALLOW_DIFF_N):
+				if check_identity(clst['Array'], get_comp_strand(ref[25:-25]), ALLOW_DIFF_N):
 					clst['Array'] = get_comp_strand(ref[-25:])+clst['Array']+get_comp_strand(ref[:25])
 				else:
 					print("Warn: ", m1.group(5), "does not allign with reference array. Skipping extension")
@@ -153,12 +154,12 @@ for key in target:
 	# ToDo: replace with probability numbers and divide into bins
 	t_counts = pd.DataFrame(columns=['b1','b2','b3'])
 	for l in range(0, args.num+1):
-		counts = collections.Counter(folded[l*6+2])
+		counts = collections.Counter(folded[l*6 + MFE_VAL])
 		n1 = counts['('] + counts[')'] + counts['|']
 		n2 = counts['{'] + counts['}'] + counts[',']
 		n3 = counts['.']
 		nn = pd.Series([n1,n2,n3], index=['b1', 'b2', 'b3'], name=l)
-		t_counts = t_counts.append(nn)
+		t_counts = t_counts.append(nn/float(len(arr)))
 
 	z_score = (t_counts[0:1] - t_counts[1:].mean())/t_counts[1:].std()
 	target[key].update({'b1': z_score.loc[0,'b1'], 'b2': z_score.loc[0,'b2'], 'b3': z_score.loc[0,'b3']})
